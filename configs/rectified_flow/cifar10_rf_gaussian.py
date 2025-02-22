@@ -72,11 +72,13 @@ def get_config():
     # data
     data = config.data
     data.centered = True # [-1, 1]
-    data.image_size = 32
+    # data.image_size = 32
+    data.image_size = 64
     data.use_aug = False
     data.num_classes = 0 # NOTE: number of classes, 0 for unconditional
     data.reflow_data_root = '' # NOTE: whether to use reflow: use paired data from (k-1) flow
-    data.custom_data_root = '' # NOTE: path to the custom dataset
+    data.custom_data_root = '/tmp2/ffhq128' # NOTE: path to the custom dataset
+    data.dataset = 'custom'
 
     # model
     model = config.model
@@ -104,5 +106,33 @@ def get_config():
     model.embedding_type = 'positional'
     model.fourier_scale = 16
     model.conv_size = 3
+
+    # model = config.model
+    # model.name = 'ncsnpp'
+    # model.scale_by_sigma = False
+    # model.ema_rate = 0.999999
+    # model.dropout = 0.15
+    # model.normalization = 'GroupNorm'
+    # model.nonlinearity = 'swish'
+    # model.nf = 96
+    # model.ch_mult = (1, 2, 3, 4)
+    # model.num_res_blocks = 5
+    # model.attn_resolutions = (32,)
+    # model.resamp_with_conv = True
+    # model.conditional = True
+    # model.fir = False
+    # model.fir_kernel = [1, 3, 3, 1]
+    # model.skip_rescale = True
+    # model.resblock_type = 'biggan'
+    # model.progressive = 'none'
+    # model.progressive_input = 'none'
+    # model.progressive_combine = 'sum'
+    # model.attention_type = 'ddpm'
+    # model.init_scale = 0.
+    # model.embedding_type = 'positional'
+    # model.fourier_scale = 16
+    # model.conv_size = 3
+    # model.image_size = 64
+
 
     return config

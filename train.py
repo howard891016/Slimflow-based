@@ -22,6 +22,7 @@ from reflow import losses as losses
 from reflow import sampling as sampling
 from reflow.augment import AugmentPipe
 from datetime import datetime
+from torchinfo import summary
 
 
 FLAGS = flags.FLAGS
@@ -66,6 +67,7 @@ def main(argv):
     ### data loader
     data_loader = datasets.get_dataset(config)
     logger.info(f'length of dataloader: {len(data_loader)}')
+    logger.info(f'Dataset name: {config.data.dataset}')
 
     ### data augmentation
     if config.data.use_aug:
@@ -84,6 +86,11 @@ def main(argv):
     ema = ExponentialMovingAverage(score_model.parameters(), decay=config.model.ema_rate)
     optimizer = losses.get_optimizer(config, score_model.parameters())
     state = dict(optimizer=optimizer, model=score_model, ema=ema, step=0)
+    summary(score_model)
+    # score_model.summary()
+    # import sys
+    # sys.exit()
+
 
     ### Resume training when intermediate checkpoints are detected
     if config.training.resume_from:
@@ -144,6 +151,9 @@ def main(argv):
         if config.sampling.sample_N != 1:
             sampling_fn_n1 = sampling.get_flow_sampler(flow, sampling_shape, inverse_scaler, device=device, use_ode_sampler='one_step')
 
+
+
+
     #################### train ####################
     optimize_fn = losses.optimization_manager(config)
     train_loss_values = []
@@ -152,6 +162,7 @@ def main(argv):
         pbar = tqdm(range(config.training.n_iters))
     else:
         pbar = range(config.training.n_iters)
+    logger.info(f'pbar: {pbar}')
     for global_step in pbar:
         if global_step < initial_step:
             continue
@@ -170,7 +181,7 @@ def main(argv):
             loss /= config.training.accumulation_steps
             loss.backward()
             batch_loss += loss
-        
+        logger.info(f'Training steps: {state["step"]}')
         ### post train step
         optimize_fn(optimizer, flow.model.parameters(), step=state['step'])
         state['step'] += 1

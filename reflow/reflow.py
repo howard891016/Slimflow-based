@@ -32,7 +32,7 @@ class RectifiedFlow():
         self.ode_tol = self.cfg.sampling.ode_tol
         self.noise_scale = self.cfg.sampling.init_noise_scale
         try:
-            self.flow_t_schedule = int(self.cfg.flow.flow_t_schedule)
+            self.flow_t_schedule = int(self.cfg.flow.flow_t_schedule) # uniform
         except:
             self.flow_t_schedule = self.cfg.flow.flow_t_schedule
         self.flow_alpha_t = self.cfg.flow.flow_alpha_t
@@ -71,7 +71,7 @@ class RectifiedFlow():
     def randomness_schedule(self, current_training_step) -> float:
         """Randomness at the current point in training."""
         # if cfg.training.x0_randomness is a number, use it as fixed randomness
-        if 'fix' in self.cfg.training.x0_randomness:
+        if 'fix' in self.cfg.training.x0_randomness: # fix_0
             self.x0_randomness = float(self.cfg.training.x0_randomness.split('_')[1])
         elif 'warmup' in self.cfg.training.x0_randomness:
             if 'exp' in self.cfg.training.x0_randomness:
@@ -96,7 +96,7 @@ class RectifiedFlow():
     ) -> Tensor:
         """Wrapper for the model call"""
         label = kwargs['label'] if 'label' in kwargs else None
-        augment_labels = kwargs['augment_labels'] if 'augment_labels' in kwargs else None
+        augment_labels = kwargs['augment_labels'] if 'augment_labels' in kwargs else None # None
         # x = torch.cat([x, self.cond], dim=1) if self.cfg.flow.use_cond else x
         # model_output = model(x, t*999, label, augment_labels)
         model_output = model(x, t*999) if label is None else model(x, t*999, label.float())
@@ -161,6 +161,13 @@ class RectifiedFlow():
     def pred_batch_outputs(self, **kwargs: Any,) -> Tuple[Tensor, Tensor]:
         """ Get the predicted and target values for computing the loss. """
         # get prediction with score model
+        # print(f'xt size: ' + str(self.xt.shape))
+        # print(f't size: ' + str(self.t.shape))
+        if isinstance(self.model, torch.nn.DataParallel):
+            model = self.model.module
+        import sys
+        print(model)
+        sys.exit()
         predicted = self.model_forward_wrapper(
             self.model,
             self.xt,
@@ -237,16 +244,19 @@ class RectifiedFlow():
         '''
         self.randomness_schedule(current_training_step)
         ## augment pipeline: edm --> https://github.com/NVlabs/edm/blob/main/training/augment.py
-        batch, augment_labels = augment_pipe(batch) if augment_pipe is not None else (batch, None)
+        batch, augment_labels = augment_pipe(batch) if augment_pipe is not None else (batch, None) # No augment
         # kwargs['augment_labels'] = augment_labels
         ## get data pair (self.data, self.noise)
         self.get_data_pair(batch)
         ## get interpolation t, x_t
         self.get_interpolations(self.data, self.noise)
         ## get prediction and target
-        predicted, target = self.pred_batch_outputs(**kwargs)
+        predicted, target = self.pred_batch_outputs(**kwargs) # target = self.data - self.noise
         ## calculate loss
-        loss = self.loss_fn(self, predicted, target)
+        loss = self.loss_fn(self, predicted, target) 
+        # loss = abs(predicted - target) if l1
+        # loss = square(predicted - target) if l2
+
         if self.cfg.flow.use_teacher:
             loss_teacher = self.teacher_loss_new(**kwargs)
             loss = loss + loss_teacher
